@@ -96,7 +96,7 @@ class LayoutWrapper extends StatelessWidget {
         ],
       ),
       body: Container(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.1),
         child: child,
       ),
     );

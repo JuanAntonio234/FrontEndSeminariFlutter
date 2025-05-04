@@ -182,8 +182,8 @@ class _BorrarScreenState extends State<BorrarScreen> {
                 );
               }
             },
-            child: const Text('ELIMINAR'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('ELIMINAR'),
           ),
         ],
       ),

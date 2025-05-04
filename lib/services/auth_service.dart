@@ -16,6 +16,7 @@ class AuthService {
     }
   }
 
+  static String? idCurrentUser;
   //login
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$_baseUrl/login');
@@ -33,7 +34,10 @@ class AuthService {
       print("Resposta rebuda amb codi: ${response.statusCode}");
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final responseJ= jsonDecode(response.body);
+        idCurrentUser=responseJ['id'];
+        return responseJ;
+
       } else {
         return {'error': 'email o contrasenya incorrectes'};
       }
@@ -46,5 +50,6 @@ class AuthService {
   void logout() {
     isLoggedIn = false; // Cambia el estado de autenticación a no autenticado
     print("Sessió tancada");
+    idCurrentUser=null;
   }
 }

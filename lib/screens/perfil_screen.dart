@@ -1,13 +1,130 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/Layout.dart';
 import '../services/auth_service.dart';
+import '../models/user.dart';
+import '../services/UserService.dart';
 
-class PerfilScreen extends StatelessWidget {
+class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
+
+@override
+State<PerfilScreen>createState()=>_PerfilScreenState();
+}
+class _PerfilScreenState extends State<PerfilScreen>{
+  bool _isLoading=true;
+  User? _user;
+  String? _errorMessage;
+  @override
+  void initState(){
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void>_fetchUserData()async{
+    try{
+      if(AuthService.idCurrentUser!=null){
+       final user=await UserService.getUserById(AuthService.idCurrentUser!);
+       setState((){
+        _user=user;
+        _isLoading=false;
+       });
+      }else{
+        setState((){
+          _errorMessage='No s\'ha loguejat l\'usuari';
+          _isLoading=false;
+        });
+       }
+    }catch(error){
+      setState(() {
+        _errorMessage='Error al carregar les dades de l\'usuari: $error';
+        _isLoading=false;
+      });
+    }
+  }
+  
+  void _changePassword() async {
+    if(_user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No s\'ha pogut carregar l\'usuari')),
+      );
+      return;
+    }
+    final password0 = TextEditingController();
+    final updatedPassword = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Canviar contrasenya'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: password0,
+                decoration: const InputDecoration(labelText: 'Contrasenya actual'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: updatedPassword,
+                decoration: const InputDecoration(labelText: 'Nova contrasenya'),
+                obscureText: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                Navigator.of(context).pop(),
+                child: const Text('Cancel·lar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try{
+                  final updatedUser = User(
+                    id: _user!.id,
+                    name: _user!.name,
+                    email: _user!.email,
+                    age:_user!.age,
+                    password: updatedPassword.text, // Actualitza la contrasenya
+                  );
+                  if (updatedPassword.text != password0.text) {
+                    await UserService.updateUser(_user!.id!,updatedUser);
+                    _fetchUserData();
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Contrasenya canviada amb èxit')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Contrasenyas no coincideixen')),
+                    );
+                  }
+                }catch(e){
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al canviar la contrasenya: $e'))
+                  );
+                }
+              },
+              child: const Text('Canviar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if(_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if(_errorMessage != null) {
+      return Center(child: Text(_errorMessage!));
+    }
     return LayoutWrapper(
       title: 'Perfil',
       child: SingleChildScrollView(
@@ -26,14 +143,14 @@ class PerfilScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Exemple',
+                    _user?.name ?? 'Nom no disponible',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'demo@exemple.com',
+                    _user?.email ?? 'Email no disponible',
                     style: Theme.of(
                       context,
                     ).textTheme.titleMedium?.copyWith(color: Colors.grey),
@@ -50,12 +167,12 @@ class PerfilScreen extends StatelessWidget {
                         children: [
                           _buildProfileItem(
                             context,
-                            Icons.badge,
-                            'ID',
-                            '67f8f3103368468b6e9d509c',
-                          ),
+                            Icons.badge,'ID',
+                            _user?.id ?? 'No disponible',
+                            ),
                           const Divider(),
-                          _buildProfileItem(context, Icons.cake, 'Edat', '22'),
+                          _buildProfileItem( context,Icons.cake, 'Edat',
+                          _user?.age.toString() ?? 'No disponible'),
                         ],
                       ),
                     ),
@@ -81,12 +198,14 @@ class PerfilScreen extends StatelessWidget {
                             Icons.edit,
                             'Editar Perfil',
                             'Actualitza la teva informació personal',
+                            _editProfile
                           ),
                           _buildSettingItem(
                             context,
                             Icons.lock,
                             'Canviar contrasenya',
                             'Actualitzar la contrasenya',
+                            _changePassword,
                           ),
                         ],
                       ),
@@ -125,6 +244,87 @@ class PerfilScreen extends StatelessWidget {
       ),
     );
   }
+
+ void _editProfile() async {
+    if(_user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No s\'ha pogut carregar l\'usuari')),
+      );
+      return;
+    }
+    final nameC = TextEditingController();
+    final emailC=TextEditingController();
+    final ageC=TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Editar usuari'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameC,
+                decoration: const InputDecoration(labelText: 'Nom'),
+                obscureText: false,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailC,
+                decoration: const InputDecoration(labelText: 'Correu electrònic'),
+                obscureText: false,
+              ),
+              TextField(
+                controller: ageC,
+                decoration: const InputDecoration(labelText: 'Edat'),
+                obscureText: false,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                Navigator.of(context).pop(),
+                child: const Text('Cancel·lar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try{
+                  if (nameC.text.isEmpty || emailC.text.isEmpty || ageC.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Tots els camps són obligatoris')),
+                    );
+                    return;
+                  }
+                  final updatedUser = User(
+                    id: _user!.id,
+                    name: nameC.text,
+                    email: emailC.text,
+                    age:int.tryParse(ageC.text) ?? _user!.age,
+                    password: _user!.password, // Actualitza la contrasenya
+                  );
+                    await UserService.updateUser(_user!.id!,updatedUser);
+                    _fetchUserData();
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Usuari actualizat amb èxit')),
+                    );
+                  
+                }catch(e){
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error a l\'actualitzar l\'usuari: $e'))
+                  );
+                }
+              },
+              child: const Text('Actualitzar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   Widget _buildProfileItem(
     BuildContext context,
@@ -168,13 +368,14 @@ class PerfilScreen extends StatelessWidget {
     IconData icon,
     String title,
     String subtitle,
+    VoidCallback? onTap,
   ) {
     return ListTile(
       leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title),
       subtitle: Text(subtitle),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () {},
+      onTap: onTap,
     );
   }
 }

@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:seminari_flutter/provider/users_provider.dart';
 import 'package:seminari_flutter/routes/app_router.dart';
 import 'package:provider/provider.dart';
-import 'package:seminari_flutter/services/auth_service.dart';
-import 'package:seminari_flutter/screens/auth/login_screen.dart';
-import 'package:seminari_flutter/screens/home_screen.dart';
 
 void main() {
   runApp(const MyApp());
